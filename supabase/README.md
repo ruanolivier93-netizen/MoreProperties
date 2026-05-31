@@ -5,10 +5,10 @@ Run these files in the Supabase SQL editor in order:
 1. `schema.sql`
 2. `seed.sql` if you want demo agencies, agents and listings
 
-Then copy your project URL and anon key into the Flutter run command:
+Then run the Flutter app with the checked-in anon-key define file:
 
 ```powershell
-flutter run --dart-define=SUPABASE_URL=https://YOUR-PROJECT.supabase.co --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
+flutter run --dart-define-from-file=supabase/dart_defines.json
 ```
 
 ## What This Includes

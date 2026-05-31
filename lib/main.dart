@@ -8,6 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+const appTextPrimary = Colors.white;
+const appTextSecondary = Color(0xCCFFFFFF);
+const appTextMuted = Color(0xB3FFFFFF);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +40,7 @@ class MorePropertiesApp extends StatelessWidget {
         ),
         textTheme: GoogleFonts.interTextTheme(
           baseTheme.textTheme,
-        ).apply(bodyColor: const Color(0xFFEAF8EF), displayColor: Colors.white),
+        ).apply(bodyColor: appTextPrimary, displayColor: appTextPrimary),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF12F58A),
@@ -73,20 +76,51 @@ class _MainShellState extends State<MainShell> {
   int tabIndex = 0;
   final favourites = <String>{'clifton-edge'};
   final searchController = TextEditingController();
+  List<PropertyListing> listings = demoListings;
+  bool loadingListings = false;
+  bool usingLiveListings = false;
+  String? listingsError;
   ListingMode mode = ListingMode.buy;
+  ListingSort sort = ListingSort.recommended;
+  int maxBudget = 50000000;
+  int minBedrooms = 0;
+  bool verifiedOnly = false;
 
   List<PropertyListing> get filteredListings {
     final query = searchController.text.trim().toLowerCase();
-    return demoListings.where((listing) {
+    final results = listings.where((listing) {
       final matchesMode = listing.mode == mode;
+      final matchesBudget = listing.price <= maxBudget;
+      final matchesBedrooms = listing.beds >= minBedrooms;
+      final matchesVerification = !verifiedOnly || listing.verifiedDocs;
       final matchesQuery =
           query.isEmpty ||
           listing.title.toLowerCase().contains(query) ||
           listing.suburb.toLowerCase().contains(query) ||
           listing.city.toLowerCase().contains(query) ||
           listing.propertyType.toLowerCase().contains(query);
-      return matchesMode && matchesQuery;
+      return matchesMode &&
+          matchesBudget &&
+          matchesBedrooms &&
+          matchesVerification &&
+          matchesQuery;
     }).toList();
+
+    results.sort((left, right) {
+      return switch (sort) {
+        ListingSort.recommended => right.matchScore.compareTo(left.matchScore),
+        ListingSort.priceLow => left.price.compareTo(right.price),
+        ListingSort.priceHigh => right.price.compareTo(left.price),
+        ListingSort.newest => left.daysOnMarket.compareTo(right.daysOnMarket),
+      };
+    });
+    return results;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadListings();
   }
 
   @override
@@ -102,14 +136,24 @@ class _MainShellState extends State<MainShell> {
         listings: filteredListings,
         favourites: favourites,
         searchController: searchController,
+        loadingListings: loadingListings,
+        usingLiveListings: usingLiveListings,
+        listingsError: listingsError,
         mode: mode,
-        onModeChanged: (value) => setState(() => mode = value),
+        sort: sort,
+        maxBudget: maxBudget,
+        minBedrooms: minBedrooms,
+        verifiedOnly: verifiedOnly,
+        onModeChanged: (value) => setState(() {
+          mode = value;
+        }),
         onSearchChanged: (_) => setState(() {}),
+        onOpenFilters: openFilters,
         onToggleFavourite: toggleFavourite,
         onOpenListing: openListing,
       ),
       SavedPage(
-        listings: demoListings
+        listings: listings
             .where((listing) => favourites.contains(listing.slug))
             .toList(),
         onOpenListing: openListing,
@@ -164,6 +208,47 @@ class _MainShellState extends State<MainShell> {
     });
   }
 
+  Future<void> loadListings() async {
+    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) return;
+
+    setState(() {
+      loadingListings = true;
+      listingsError = null;
+    });
+
+    try {
+      final rows = await Supabase.instance.client
+          .from('listings')
+          .select(
+            '*, agents(id, display_name, email, phone, avatar_url, rating, response_minutes, verified, agencies(name))',
+          )
+          .eq('status', 'active')
+          .order('is_featured', ascending: false)
+          .order('published_at', ascending: false);
+      final liveListings = rows
+          .map(
+            (row) =>
+                PropertyListing.fromSupabase(Map<String, dynamic>.from(row)),
+          )
+          .toList(growable: false);
+      if (!mounted) return;
+      setState(() {
+        listings = liveListings.isEmpty ? demoListings : liveListings;
+        usingLiveListings = liveListings.isNotEmpty;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        listings = demoListings;
+        usingLiveListings = false;
+        listingsError =
+            'Supabase tables not found yet. Run schema.sql, then seed.sql.';
+      });
+    } finally {
+      if (mounted) setState(() => loadingListings = false);
+    }
+  }
+
   void openListing(PropertyListing listing) {
     showModalBottomSheet<void>(
       context: context,
@@ -176,6 +261,37 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+
+  void openFilters() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF08100B),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => FilterSheet(
+        sort: sort,
+        maxBudget: maxBudget,
+        minBedrooms: minBedrooms,
+        verifiedOnly: verifiedOnly,
+        onApply:
+            ({
+              required selectedSort,
+              required selectedMaxBudget,
+              required selectedMinBedrooms,
+              required selectedVerifiedOnly,
+            }) {
+              setState(() {
+                sort = selectedSort;
+                maxBudget = selectedMaxBudget;
+                minBedrooms = selectedMinBedrooms;
+                verifiedOnly = selectedVerifiedOnly;
+              });
+            },
+      ),
+    );
+  }
 }
 
 class DiscoverPage extends StatelessWidget {
@@ -184,9 +300,17 @@ class DiscoverPage extends StatelessWidget {
     required this.listings,
     required this.favourites,
     required this.searchController,
+    required this.loadingListings,
+    required this.usingLiveListings,
+    required this.listingsError,
     required this.mode,
+    required this.sort,
+    required this.maxBudget,
+    required this.minBedrooms,
+    required this.verifiedOnly,
     required this.onModeChanged,
     required this.onSearchChanged,
+    required this.onOpenFilters,
     required this.onToggleFavourite,
     required this.onOpenListing,
   });
@@ -194,9 +318,17 @@ class DiscoverPage extends StatelessWidget {
   final List<PropertyListing> listings;
   final Set<String> favourites;
   final TextEditingController searchController;
+  final bool loadingListings;
+  final bool usingLiveListings;
+  final String? listingsError;
   final ListingMode mode;
+  final ListingSort sort;
+  final int maxBudget;
+  final int minBedrooms;
+  final bool verifiedOnly;
   final ValueChanged<ListingMode> onModeChanged;
   final ValueChanged<String> onSearchChanged;
+  final VoidCallback onOpenFilters;
   final ValueChanged<String> onToggleFavourite;
   final ValueChanged<PropertyListing> onOpenListing;
 
@@ -212,6 +344,12 @@ class DiscoverPage extends StatelessWidget {
               children: [
                 const BrandHeader(),
                 const SizedBox(height: 18),
+                CatalogueStatus(
+                  loading: loadingListings,
+                  usingLiveListings: usingLiveListings,
+                  error: listingsError,
+                ),
+                const SizedBox(height: 12),
                 const HeroPanel(),
                 const SizedBox(height: 16),
                 SearchBox(
@@ -220,6 +358,16 @@ class DiscoverPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 ModeSelector(mode: mode, onModeChanged: onModeChanged),
+                const SizedBox(height: 12),
+                DiscoveryCommandBar(
+                  sort: sort,
+                  maxBudget: maxBudget,
+                  minBedrooms: minBedrooms,
+                  verifiedOnly: verifiedOnly,
+                  onOpenFilters: onOpenFilters,
+                ),
+                const SizedBox(height: 18),
+                const BuyerEdgePanel(),
                 const SizedBox(height: 18),
                 const MarketPulse(),
                 const SizedBox(height: 18),
@@ -278,7 +426,7 @@ void showMapPreview(BuildContext context, List<PropertyListing> listings) {
           const SizedBox(height: 8),
           Text(
             'Listing coordinates and suburb analytics are Supabase-ready. Add Mapbox or Google Maps keys when you want the live map layer.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            style: TextStyle(color: appTextMuted),
           ),
           const SizedBox(height: 18),
           Container(
@@ -335,7 +483,7 @@ class BrandHeader extends StatelessWidget {
               ),
               Text(
                 'South Africa, elevated',
-                style: TextStyle(color: Color(0xFF9FB5A7), fontSize: 12),
+                style: TextStyle(color: appTextMuted, fontSize: 12),
               ),
             ],
           ),
@@ -351,47 +499,108 @@ class HeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 320;
+        return Container(
+          height: compact ? 260 : 208,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            image: const DecorationImage(
+              image: CachedNetworkImageProvider(
+                'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1400&q=80',
+              ),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(compact ? 16 : 20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x99000000), Color(0xEE020503)],
+              ),
+              border: Border.all(color: const Color(0x5512F58A)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Find the move before the market moves.',
+                  maxLines: compact ? 4 : 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: compact ? 21 : 27,
+                    height: compact ? 1.08 : 1.02,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Verified listings, smart alerts, area signals, agent response tracking, and premium lead capture in one mobile app.',
+                  maxLines: compact ? 4 : 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: appTextSecondary, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class CatalogueStatus extends StatelessWidget {
+  const CatalogueStatus({
+    super.key,
+    required this.loading,
+    required this.usingLiveListings,
+    required this.error,
+  });
+
+  final bool loading;
+  final bool usingLiveListings;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = loading
+        ? 'Syncing live listings'
+        : usingLiveListings
+        ? 'Live Supabase catalogue'
+        : error ?? 'Demo catalogue active';
+    final icon = loading
+        ? Icons.sync
+        : usingLiveListings
+        ? Icons.cloud_done_outlined
+        : Icons.offline_bolt_outlined;
+
     return Container(
-      height: 208,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        image: const DecorationImage(
-          image: CachedNetworkImageProvider(
-            'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1400&q=80',
-          ),
-          fit: BoxFit.cover,
-        ),
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x2212F58A)),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x99000000), Color(0xEE020503)],
-          ),
-          border: Border.all(color: const Color(0x5512F58A)),
-        ),
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              'Find the move before the market moves.',
-              style: TextStyle(
-                fontSize: 27,
-                height: 1.02,
-                fontWeight: FontWeight.w900,
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF12F58A), size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: appTextSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            SizedBox(height: 8),
-            Text(
-              'Verified listings, smart alerts, area signals, agent response tracking, and premium lead capture in one mobile app.',
-              style: TextStyle(color: Color(0xFFD8EADF), height: 1.35),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -413,7 +622,7 @@ class SearchBox extends StatelessWidget {
       controller: controller,
       onChanged: onChanged,
       decoration: InputDecoration(
-        hintText: 'Search suburb, city, estate or property type',
+        hintText: 'Search suburb, city or type',
         prefixIcon: const Icon(Icons.search),
         suffixIcon: IconButton(
           onPressed: () {
@@ -449,28 +658,265 @@ class ModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: ListingMode.values.map((item) {
-          final selected = item == mode;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              selected: selected,
-              label: Text(item.label),
-              avatar: Icon(item.icon, size: 18),
-              onSelected: (_) => onModeChanged(item),
-              selectedColor: const Color(0xFF12F58A),
-              backgroundColor: const Color(0xFF0A110D),
-              labelStyle: TextStyle(
-                color: selected ? Colors.black : Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-              side: const BorderSide(color: Color(0x3312F58A)),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: ListingMode.values.map((item) {
+        final selected = item == mode;
+        return ChoiceChip(
+          selected: selected,
+          label: Text(item.label),
+          avatar: Icon(item.icon, size: 18),
+          onSelected: (_) => onModeChanged(item),
+          selectedColor: const Color(0xFF12F58A),
+          backgroundColor: const Color(0xFF0A110D),
+          labelStyle: TextStyle(
+            color: selected ? Colors.black : Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+          side: const BorderSide(color: Color(0x3312F58A)),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class DiscoveryCommandBar extends StatelessWidget {
+  const DiscoveryCommandBar({
+    super.key,
+    required this.sort,
+    required this.maxBudget,
+    required this.minBedrooms,
+    required this.verifiedOnly,
+    required this.onOpenFilters,
+  });
+
+  final ListingSort sort;
+  final int maxBudget;
+  final int minBedrooms;
+  final bool verifiedOnly;
+  final VoidCallback onOpenFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final filters = [
+      sort.label,
+      'Up to ${compactCurrency(maxBudget)}',
+      if (minBedrooms > 0) '$minBedrooms+ beds',
+      if (verifiedOnly) 'Verified docs',
+    ];
+
+    return Row(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: filters
+                  .map(
+                    (filter) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FactChip(icon: Icons.bolt_outlined, label: filter),
+                    ),
+                  )
+                  .toList(),
             ),
-          );
-        }).toList(),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filled(
+          onPressed: onOpenFilters,
+          icon: const Icon(Icons.tune),
+          tooltip: 'Filters',
+        ),
+      ],
+    );
+  }
+}
+
+class BuyerEdgePanel extends StatelessWidget {
+  const BuyerEdgePanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: const Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: Color(0xFF12F58A),
+            child: Icon(Icons.workspace_premium_outlined, color: Colors.black),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Buyer edge active',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Listings are ranked by mandate quality, agent speed, buyer demand and price signal.',
+                  style: TextStyle(color: appTextMuted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+typedef FilterApplyCallback =
+    void Function({
+      required ListingSort selectedSort,
+      required int selectedMaxBudget,
+      required int selectedMinBedrooms,
+      required bool selectedVerifiedOnly,
+    });
+
+class FilterSheet extends StatefulWidget {
+  const FilterSheet({
+    super.key,
+    required this.sort,
+    required this.maxBudget,
+    required this.minBedrooms,
+    required this.verifiedOnly,
+    required this.onApply,
+  });
+
+  final ListingSort sort;
+  final int maxBudget;
+  final int minBedrooms;
+  final bool verifiedOnly;
+  final FilterApplyCallback onApply;
+
+  @override
+  State<FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<FilterSheet> {
+  late ListingSort sort = widget.sort;
+  late double maxBudget = widget.maxBudget.toDouble();
+  late int minBedrooms = widget.minBedrooms;
+  late bool verifiedOnly = widget.verifiedOnly;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          18,
+          18,
+          18,
+          18 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tune your search',
+              style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ListingSort.values.map((item) {
+                return ChoiceChip(
+                  selected: item == sort,
+                  label: Text(item.label),
+                  onSelected: (_) => setState(() => sort = item),
+                  selectedColor: const Color(0xFF12F58A),
+                  backgroundColor: const Color(0xFF0A110D),
+                  labelStyle: TextStyle(
+                    color: item == sort ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  side: const BorderSide(color: Color(0x3312F58A)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Budget ceiling: ${compactCurrency(maxBudget.round())}',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            Slider(
+              value: maxBudget,
+              min: 1000000,
+              max: 50000000,
+              divisions: 49,
+              label: compactCurrency(maxBudget.round()),
+              onChanged: (value) => setState(() => maxBudget = value),
+            ),
+            const SizedBox(height: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Minimum bedrooms',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 0, label: Text('Any')),
+                      ButtonSegment(value: 2, label: Text('2+')),
+                      ButtonSegment(value: 3, label: Text('3+')),
+                      ButtonSegment(value: 4, label: Text('4+')),
+                    ],
+                    selected: {minBedrooms},
+                    onSelectionChanged: (values) {
+                      setState(() => minBedrooms = values.first);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Only verified mandates',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              subtitle: const Text(
+                'Documents, agent and media quality checked',
+              ),
+              value: verifiedOnly,
+              onChanged: (value) => setState(() => verifiedOnly = value),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  widget.onApply(
+                    selectedSort: sort,
+                    selectedMaxBudget: maxBudget.round(),
+                    selectedMinBedrooms: minBedrooms,
+                    selectedVerifiedOnly: verifiedOnly,
+                  );
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Apply filters'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -482,7 +928,7 @@ class MarketPulse extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 94,
+      height: 112,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: marketPulses.length,
@@ -490,7 +936,7 @@ class MarketPulse extends StatelessWidget {
         itemBuilder: (context, index) {
           final pulse = marketPulses[index];
           return Container(
-            width: 154,
+            width: 170,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: const Color(0xFF0A110D),
@@ -502,14 +948,15 @@ class MarketPulse extends StatelessWidget {
               children: [
                 Text(
                   pulse.label,
-                  style: const TextStyle(
-                    color: Color(0xFF9FB5A7),
-                    fontSize: 12,
-                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: appTextMuted, fontSize: 12),
                 ),
                 const Spacer(),
                 Text(
                   pulse.value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -517,6 +964,8 @@ class MarketPulse extends StatelessWidget {
                 ),
                 Text(
                   pulse.delta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF12F58A),
                     fontWeight: FontWeight.w800,
@@ -601,6 +1050,11 @@ class PropertyCard extends StatelessWidget {
                     child: StatusPill(text: listing.badge),
                   ),
                   Positioned(
+                    left: 12,
+                    bottom: 12,
+                    child: StatusPill(text: '${listing.matchScore}% match'),
+                  ),
+                  Positioned(
                     right: 12,
                     top: 12,
                     child: IconButton.filled(
@@ -631,6 +1085,8 @@ class PropertyCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     listing.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -639,7 +1095,29 @@ class PropertyCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '${listing.suburb}, ${listing.city}',
-                    style: const TextStyle(color: Color(0xFF9FB5A7)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: appTextMuted),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FactChip(
+                        icon: Icons.local_fire_department_outlined,
+                        label: '${listing.demandScore}/100 demand',
+                      ),
+                      FactChip(
+                        icon: Icons.visibility_outlined,
+                        label: '${listing.viewsThisWeek} views',
+                      ),
+                      if (listing.verifiedDocs)
+                        const FactChip(
+                          icon: Icons.verified_outlined,
+                          label: 'Verified',
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 14),
                   Wrap(
@@ -677,8 +1155,10 @@ class PropertyCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           '${listing.agent.name} · ${listing.agent.responseTime}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: Color(0xFFD8EADF),
+                            color: appTextSecondary,
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -729,7 +1209,7 @@ class ListingDetailSheet extends StatelessWidget {
                 children: [
                   CachedNetworkImage(
                     imageUrl: listing.imageUrl,
-                    height: 320,
+                    height: 360,
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
@@ -792,6 +1272,8 @@ class ListingDetailSheet extends StatelessWidget {
                         const SizedBox(height: 10),
                         Text(
                           currency(listing.price),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
@@ -799,6 +1281,8 @@ class ListingDetailSheet extends StatelessWidget {
                         ),
                         Text(
                           listing.title,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
@@ -807,7 +1291,20 @@ class ListingDetailSheet extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${listing.suburb}, ${listing.city}',
-                          style: const TextStyle(color: Color(0xFFD8EADF)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: appTextSecondary),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            StatusPill(text: '${listing.matchScore}% match'),
+                            StatusPill(
+                              text: '${listing.daysOnMarket} days live',
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -843,8 +1340,14 @@ class ListingDetailSheet extends StatelessWidget {
                           icon: Icons.landscape_outlined,
                           label: '${listing.erfSize} m2 erf',
                         ),
+                        FactChip(
+                          icon: Icons.payments_outlined,
+                          label: '${currency(listing.monthlyBond)} est. bond',
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 22),
+                    ListingSignalGrid(listing: listing),
                     const SizedBox(height: 22),
                     const Text(
                       'Overview',
@@ -857,7 +1360,7 @@ class ListingDetailSheet extends StatelessWidget {
                     Text(
                       listing.description,
                       style: const TextStyle(
-                        color: Color(0xFFD8EADF),
+                        color: appTextSecondary,
                         height: 1.55,
                       ),
                     ),
@@ -944,6 +1447,9 @@ class _LeadFormState extends State<LeadForm> {
   final name = TextEditingController();
   final email = TextEditingController();
   final phone = TextEditingController();
+  final message = TextEditingController();
+  String readiness = 'Viewing soon';
+  String viewingWindow = 'This week';
   bool busy = false;
 
   @override
@@ -951,6 +1457,7 @@ class _LeadFormState extends State<LeadForm> {
     name.dispose();
     email.dispose();
     phone.dispose();
+    message.dispose();
     super.dispose();
   }
 
@@ -974,7 +1481,7 @@ class _LeadFormState extends State<LeadForm> {
           const SizedBox(height: 8),
           Text(
             widget.listing.title,
-            style: const TextStyle(color: Color(0xFF9FB5A7)),
+            style: const TextStyle(color: appTextMuted),
           ),
           const SizedBox(height: 16),
           AppField(
@@ -993,6 +1500,63 @@ class _LeadFormState extends State<LeadForm> {
             controller: phone,
             label: 'Mobile number',
             icon: Icons.phone_iphone,
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Buyer intent',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['Viewing soon', 'Need finance', 'Cash buyer'].map((
+              item,
+            ) {
+              return ChoiceChip(
+                selected: readiness == item,
+                label: Text(item),
+                onSelected: (_) => setState(() => readiness = item),
+                selectedColor: const Color(0xFF12F58A),
+                backgroundColor: const Color(0xFF0A110D),
+                labelStyle: TextStyle(
+                  color: readiness == item ? Colors.black : Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+                side: const BorderSide(color: Color(0x3312F58A)),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Preferred time',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['This week', 'Weekend', 'After hours'].map((item) {
+              return ChoiceChip(
+                selected: viewingWindow == item,
+                label: Text(item),
+                onSelected: (_) => setState(() => viewingWindow = item),
+                selectedColor: const Color(0xFF12F58A),
+                backgroundColor: const Color(0xFF0A110D),
+                labelStyle: TextStyle(
+                  color: viewingWindow == item ? Colors.black : Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+                side: const BorderSide(color: Color(0x3312F58A)),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 10),
+          AppField(
+            controller: message,
+            label: 'Message to agent',
+            icon: Icons.chat_bubble_outline,
+            maxLines: 3,
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -1014,9 +1578,27 @@ class _LeadFormState extends State<LeadForm> {
   }
 
   Future<void> submitLead() async {
-    setState(() => busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    final contact =
+        email.text.trim().isNotEmpty || phone.text.trim().isNotEmpty;
+    if (name.text.trim().isEmpty || !contact) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Add your name and at least one contact detail.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => busy = true);
     final navigator = Navigator.of(context);
+    final leadMessage = [
+      if (message.text.trim().isNotEmpty) message.text.trim(),
+      'Interested in ${widget.listing.title}.',
+      'Intent: $readiness.',
+      'Preferred viewing: $viewingWindow.',
+      'Listing signal: ${widget.listing.matchScore}% match, ${widget.listing.demandScore}/100 demand.',
+    ].join(' ');
     try {
       if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
         await Supabase.instance.client.from('leads').insert({
@@ -1025,8 +1607,7 @@ class _LeadFormState extends State<LeadForm> {
           'name': name.text.trim(),
           'email': email.text.trim(),
           'phone': phone.text.trim(),
-          'message':
-              'I would like to book a viewing for ${widget.listing.title}',
+          'message': leadMessage,
           'source': 'mobile_app',
           'status': 'new',
         });
@@ -1059,16 +1640,19 @@ class AppField extends StatelessWidget {
     required this.controller,
     required this.label,
     required this.icon,
+    this.maxLines = 1,
   });
 
   final TextEditingController controller;
   final String label;
   final IconData icon;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
@@ -1106,7 +1690,7 @@ class SavedPage extends StatelessWidget {
         const SizedBox(height: 8),
         const Text(
           'Shortlist, compare, share and convert favourites into viewing requests.',
-          style: TextStyle(color: Color(0xFF9FB5A7)),
+          style: TextStyle(color: appTextMuted),
         ),
         const SizedBox(height: 18),
         if (listings.isEmpty)
@@ -1148,7 +1732,7 @@ class AlertsPage extends StatelessWidget {
         const SizedBox(height: 8),
         const Text(
           'Saved searches become Supabase rows and can power email, push, or WhatsApp notifications.',
-          style: TextStyle(color: Color(0xFF9FB5A7)),
+          style: TextStyle(color: appTextMuted),
         ),
         const SizedBox(height: 18),
         ...savedSearches.map(
@@ -1179,7 +1763,7 @@ class AlertsPage extends StatelessWidget {
                       Text(
                         search.criteria,
                         style: const TextStyle(
-                          color: Color(0xFF9FB5A7),
+                          color: appTextMuted,
                           fontSize: 12,
                         ),
                       ),
@@ -1228,7 +1812,7 @@ class AgentsPage extends StatelessWidget {
         const SizedBox(height: 8),
         const Text(
           'Rank by response speed, area authority, mandate quality and buyer feedback.',
-          style: TextStyle(color: Color(0xFF9FB5A7)),
+          style: TextStyle(color: appTextMuted),
         ),
         const SizedBox(height: 18),
         ...demoAgents.map(
@@ -1259,7 +1843,7 @@ class StudioPage extends StatelessWidget {
         SizedBox(height: 8),
         Text(
           'A mobile control room for mandates, enquiries, listing quality, scheduled viewings and performance.',
-          style: TextStyle(color: Color(0xFF9FB5A7)),
+          style: TextStyle(color: appTextMuted),
         ),
         SizedBox(height: 18),
         StudioMetric(
@@ -1317,6 +1901,7 @@ class StudioMetric extends StatelessWidget {
           border: Border.all(color: const Color(0x2212F58A)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CircleAvatar(
               backgroundColor: const Color(0xFF12F58A),
@@ -1327,7 +1912,7 @@ class StudioMetric extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Color(0xFF9FB5A7))),
+                  Text(title, style: const TextStyle(color: appTextMuted)),
                   Text(
                     value,
                     style: const TextStyle(
@@ -1335,21 +1920,105 @@ class StudioMetric extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
+                  const SizedBox(height: 3),
+                  Text(
+                    delta,
+                    style: const TextStyle(
+                      color: Color(0xFF12F58A),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
-              ),
-            ),
-            Flexible(
-              child: Text(
-                delta,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Color(0xFF12F58A),
-                  fontWeight: FontWeight.w800,
-                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ListingSignalGrid extends StatelessWidget {
+  const ListingSignalGrid({super.key, required this.listing});
+
+  final PropertyListing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final signals = [
+      SignalData(
+        icon: Icons.analytics_outlined,
+        label: 'Price signal',
+        value: listing.priceSignal,
+      ),
+      SignalData(
+        icon: Icons.trending_up,
+        label: 'Growth case',
+        value: listing.roiNote,
+      ),
+      SignalData(
+        icon: Icons.groups_outlined,
+        label: 'Buyer demand',
+        value: '${listing.demandScore}/100 · ${listing.viewsThisWeek} views',
+      ),
+      SignalData(
+        icon: Icons.verified_outlined,
+        label: 'Trust layer',
+        value: listing.verifiedDocs ? 'Verified mandate' : 'Agent supplied',
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final singleColumn = constraints.maxWidth < 430;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: signals.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: singleColumn ? 1 : 2,
+            mainAxisExtent: singleColumn ? 104 : 132,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemBuilder: (context, index) => SignalTile(signal: signals[index]),
+        );
+      },
+    );
+  }
+}
+
+class SignalTile extends StatelessWidget {
+  const SignalTile({super.key, required this.signal});
+
+  final SignalData signal;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x2212F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(signal.icon, color: const Color(0xFF12F58A), size: 20),
+          const SizedBox(height: 8),
+          Text(
+            signal.label,
+            style: const TextStyle(color: appTextMuted, fontSize: 12),
+          ),
+          const Spacer(),
+          Text(
+            signal.value,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900, height: 1.2),
+          ),
+        ],
       ),
     );
   }
@@ -1382,18 +2051,24 @@ class AgentPanel extends StatelessWidget {
               children: [
                 Text(
                   agent.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 Text(
                   agent.agency,
-                  style: const TextStyle(color: Color(0xFF9FB5A7)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: appTextMuted),
                 ),
                 const SizedBox(height: 5),
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
                   children: [
                     const Icon(Icons.star, size: 16, color: Color(0xFF12F58A)),
                     Text(
-                      ' ${agent.rating} · ${agent.responseTime}',
+                      '${agent.rating} · ${agent.responseTime}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
@@ -1492,11 +2167,13 @@ class EmptyState extends StatelessWidget {
 
 enum ListingMode { buy, rent, developments, commercial }
 
+enum ListingSort { recommended, priceLow, priceHigh, newest }
+
 extension ListingModeUi on ListingMode {
   String get label => switch (this) {
     ListingMode.buy => 'Buy',
     ListingMode.rent => 'Rent',
-    ListingMode.developments => 'Developments',
+    ListingMode.developments => 'New Builds',
     ListingMode.commercial => 'Commercial',
   };
 
@@ -1506,6 +2183,27 @@ extension ListingModeUi on ListingMode {
     ListingMode.developments => Icons.apartment_outlined,
     ListingMode.commercial => Icons.store_mall_directory_outlined,
   };
+}
+
+extension ListingSortUi on ListingSort {
+  String get label => switch (this) {
+    ListingSort.recommended => 'Recommended',
+    ListingSort.priceLow => 'Lowest price',
+    ListingSort.priceHigh => 'Highest price',
+    ListingSort.newest => 'Newest',
+  };
+}
+
+class SignalData {
+  const SignalData({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
 }
 
 class Agent {
@@ -1550,7 +2248,87 @@ class PropertyListing {
     required this.description,
     required this.highlights,
     required this.agent,
+    required this.matchScore,
+    required this.demandScore,
+    required this.daysOnMarket,
+    required this.viewsThisWeek,
+    required this.verifiedDocs,
+    required this.priceSignal,
+    required this.roiNote,
+    required this.monthlyBond,
   });
+
+  factory PropertyListing.fromSupabase(Map<String, dynamic> row) {
+    final agentRow = Map<String, dynamic>.from(row['agents'] as Map? ?? {});
+    final agencyRow = Map<String, dynamic>.from(
+      agentRow['agencies'] as Map? ?? {},
+    );
+    final price = _readInt(row['price']);
+    final features = _readStringList(row['features']);
+    final amenities = _readStringList(row['amenities']);
+    final isFeatured = row['is_featured'] == true;
+    final responseMinutes = _readInt(
+      agentRow['response_minutes'],
+      fallback: 30,
+    );
+    final daysOnMarket = _daysSince(row['published_at']);
+    final demandScore = _clampScore(
+      72 +
+          (isFeatured ? 9 : 0) +
+          (responseMinutes <= 12 ? 8 : 0) -
+          daysOnMarket,
+    );
+    final matchScore = _clampScore(
+      demandScore +
+          (row['mode'] == 'buy' ? 4 : 0) +
+          (agentRow['verified'] == true ? 3 : 0),
+    );
+
+    return PropertyListing(
+      id: row['id']?.toString() ?? '',
+      slug: row['slug']?.toString() ?? '',
+      title: row['title']?.toString() ?? 'Untitled listing',
+      mode: ListingMode.values.firstWhere(
+        (item) => item.name == row['mode']?.toString(),
+        orElse: () => ListingMode.buy,
+      ),
+      propertyType: row['property_type']?.toString() ?? 'Property',
+      price: price,
+      suburb: row['suburb']?.toString() ?? '',
+      city: row['city']?.toString() ?? '',
+      beds: _readInt(row['bedrooms']),
+      baths: _readInt(row['bathrooms']),
+      parking: _readInt(row['parking']),
+      floorSize: _readInt(row['floor_size']),
+      erfSize: _readInt(row['erf_size']),
+      imageUrl:
+          row['hero_image_url']?.toString() ?? demoListings.first.imageUrl,
+      badge: isFeatured ? 'Featured mandate' : 'Verified listing',
+      description: row['description']?.toString() ?? '',
+      highlights: features.isEmpty ? amenities : features,
+      agent: Agent(
+        id: agentRow['id']?.toString() ?? '',
+        name: agentRow['display_name']?.toString() ?? 'More Properties Agent',
+        agency: agencyRow['name']?.toString() ?? 'More Properties',
+        email: agentRow['email']?.toString() ?? 'hello@moreproperties.co.za',
+        phone: agentRow['phone']?.toString() ?? '+27000000000',
+        avatarUrl:
+            agentRow['avatar_url']?.toString() ?? demoAgents.first.avatarUrl,
+        rating: _readDouble(agentRow['rating'], fallback: 4.8),
+        responseTime: '$responseMinutes min response',
+      ),
+      matchScore: matchScore,
+      demandScore: demandScore,
+      daysOnMarket: daysOnMarket,
+      viewsThisWeek: 70 + (matchScore * 2) + (isFeatured ? 35 : 0),
+      verifiedDocs: agentRow['verified'] == true || isFeatured,
+      priceSignal: _priceSignal(row['mode']?.toString(), isFeatured),
+      roiNote: _roiNote(row['mode']?.toString(), row['city']?.toString() ?? ''),
+      monthlyBond: row['mode'] == 'rent' || row['mode'] == 'commercial'
+          ? price
+          : (price * 0.01).round(),
+    );
+  }
 
   final String id;
   final String slug;
@@ -1570,6 +2348,14 @@ class PropertyListing {
   final String description;
   final List<String> highlights;
   final Agent agent;
+  final int matchScore;
+  final int demandScore;
+  final int daysOnMarket;
+  final int viewsThisWeek;
+  final bool verifiedDocs;
+  final String priceSignal;
+  final String roiNote;
+  final int monthlyBond;
 }
 
 class SavedSearchData {
@@ -1609,6 +2395,49 @@ String currency(int value) => currencyFormat.format(value);
 String compactCurrency(int value) {
   if (value >= 1000000) return 'R${(value / 1000000).toStringAsFixed(1)}m';
   return 'R${(value / 1000).round()}k';
+}
+
+int _readInt(Object? value, {int fallback = 0}) {
+  if (value is int) return value;
+  if (value is num) return value.round();
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+double _readDouble(Object? value, {double fallback = 0}) {
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
+List<String> _readStringList(Object? value) {
+  if (value is List) return value.map((item) => item.toString()).toList();
+  return const [];
+}
+
+int _daysSince(Object? value) {
+  final publishedAt = DateTime.tryParse(value?.toString() ?? '');
+  if (publishedAt == null) return 14;
+  return DateTime.now().difference(publishedAt).inDays.clamp(1, 90).toInt();
+}
+
+int _clampScore(int value) => value.clamp(58, 98).toInt();
+
+String _priceSignal(String? mode, bool isFeatured) {
+  return switch (mode) {
+    'rent' => 'High-intent rental demand',
+    'commercial' => 'Negotiable lease economics',
+    'developments' => 'Launch-phase pricing window',
+    _ => isFeatured ? 'Priority mandate pricing' : 'Comparable-market aligned',
+  };
+}
+
+String _roiNote(String? mode, String city) {
+  return switch (mode) {
+    'rent' => 'Income-ready lifestyle stock',
+    'commercial' => 'Tenant retention upside',
+    'developments' => 'Early-phase entry advantage',
+    _ => '$city demand supports resale depth',
+  };
 }
 
 const demoAgents = [
@@ -1673,6 +2502,14 @@ final demoListings = [
       'Designer kitchen and temperature-controlled wine room',
     ],
     agent: demoAgents[0],
+    matchScore: 97,
+    demandScore: 91,
+    daysOnMarket: 6,
+    viewsThisWeek: 184,
+    verifiedDocs: true,
+    priceSignal: 'Rare Clifton inventory',
+    roiNote: 'Scarcity-led capital preservation',
+    monthlyBond: 389000,
   ),
   PropertyListing(
     id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
@@ -1699,6 +2536,14 @@ final demoListings = [
       'Walkable business and lifestyle precinct',
     ],
     agent: demoAgents[1],
+    matchScore: 89,
+    demandScore: 86,
+    daysOnMarket: 3,
+    viewsThisWeek: 241,
+    verifiedDocs: true,
+    priceSignal: 'Below nearby new-build stock',
+    roiNote: 'Strong rental depth near Gautrain',
+    monthlyBond: 32600,
   ),
   PropertyListing(
     id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
@@ -1725,6 +2570,14 @@ final demoListings = [
       'Pool, gym and 24-hour security',
     ],
     agent: demoAgents[2],
+    matchScore: 92,
+    demandScore: 88,
+    daysOnMarket: 2,
+    viewsThisWeek: 167,
+    verifiedDocs: true,
+    priceSignal: 'Premium furnished rental band',
+    roiNote: 'Corporate tenant appeal',
+    monthlyBond: 34500,
   ),
   PropertyListing(
     id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
@@ -1751,6 +2604,14 @@ final demoListings = [
       'Phase launch with occupation tracking',
     ],
     agent: demoAgents[0],
+    matchScore: 94,
+    demandScore: 83,
+    daysOnMarket: 9,
+    viewsThisWeek: 129,
+    verifiedDocs: true,
+    priceSignal: 'Launch pricing window',
+    roiNote: 'No transfer duty improves entry cost',
+    monthlyBond: 48950,
   ),
   PropertyListing(
     id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
@@ -1777,6 +2638,14 @@ final demoListings = [
       'Flexible lease and fit-out support',
     ],
     agent: demoAgents[1],
+    matchScore: 87,
+    demandScore: 79,
+    daysOnMarket: 11,
+    viewsThisWeek: 96,
+    verifiedDocs: false,
+    priceSignal: 'Competitive per-square metre lease',
+    roiNote: 'Flexible floor supports tenant retention',
+    monthlyBond: 188000,
   ),
 ];
 

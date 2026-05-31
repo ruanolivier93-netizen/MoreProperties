@@ -28,8 +28,20 @@ flutter run
 Run connected to Supabase:
 
 ```powershell
-flutter run --dart-define=SUPABASE_URL=https://YOUR-PROJECT.supabase.co --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
+flutter run --dart-define-from-file=supabase/dart_defines.json
 ```
+
+## GitHub Build
+
+GitHub Actions builds the Flutter web app on every push or pull request to `main` or `master`. You can also run it manually from the repository's `Actions` tab by selecting `Flutter CI` and choosing `Run workflow`.
+
+The workflow runs `flutter pub get`, `flutter analyze`, `flutter test`, and:
+
+```powershell
+flutter build web --release --dart-define-from-file=supabase/dart_defines.json
+```
+
+When the workflow finishes, download the `more-properties-web` artifact from the run summary.
 
 ## Supabase Setup
 
@@ -37,6 +49,8 @@ Open the Supabase SQL editor and run:
 
 1. [supabase/schema.sql](supabase/schema.sql)
 2. [supabase/seed.sql](supabase/seed.sql)
+
+If the browser console shows a `404` for `/rest/v1/listings`, the app is connected to Supabase but the database tables have not been created in that project yet. Run the two SQL files above, refresh the app, and the live catalogue will replace the demo fallback.
 
 The schema includes profiles, agencies, agents, listings, listing images, favourites, saved searches, leads, appointments, listing views, storage policies and RLS.
 

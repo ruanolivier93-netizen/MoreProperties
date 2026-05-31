@@ -1,0 +1,44 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    name: Analyze, Test, and Build Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze project
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build web app
+        run: flutter build web --release --dart-define-from-file=supabase/dart_defines.json
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: more-properties-web
+          path: build/web
