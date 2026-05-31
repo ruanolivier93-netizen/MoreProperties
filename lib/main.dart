@@ -150,6 +150,7 @@ class _MainShellState extends State<MainShell> {
         onSearchChanged: (_) => setState(() {}),
         onOpenFilters: openFilters,
         onOpenValuation: openValuation,
+        onApplyBuyerBudget: applyBuyerBudget,
         onToggleFavourite: toggleFavourite,
         onOpenListing: openListing,
       ),
@@ -275,6 +276,20 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  void applyBuyerBudget(int budget) {
+    setState(() {
+      tabIndex = 0;
+      mode = ListingMode.buy;
+      maxBudget = budget;
+      sort = ListingSort.recommended;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Showing homes up to ${compactCurrency(budget)}.'),
+      ),
+    );
+  }
+
   void openFilters() {
     showModalBottomSheet<void>(
       context: context,
@@ -325,6 +340,7 @@ class DiscoverPage extends StatelessWidget {
     required this.onSearchChanged,
     required this.onOpenFilters,
     required this.onOpenValuation,
+    required this.onApplyBuyerBudget,
     required this.onToggleFavourite,
     required this.onOpenListing,
   });
@@ -344,6 +360,7 @@ class DiscoverPage extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onOpenFilters;
   final VoidCallback onOpenValuation;
+  final ValueChanged<int> onApplyBuyerBudget;
   final ValueChanged<String> onToggleFavourite;
   final ValueChanged<PropertyListing> onOpenListing;
 
@@ -383,6 +400,10 @@ class DiscoverPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 const BuyerEdgePanel(),
+                const SizedBox(height: 18),
+                BuyerAffordabilityPlanner(onApplyBudget: onApplyBuyerBudget),
+                const SizedBox(height: 18),
+                const BuyerJourneyPanel(),
                 const SizedBox(height: 18),
                 SellerValuationPanel(onStart: onOpenValuation),
                 const SizedBox(height: 18),
@@ -790,6 +811,266 @@ class BuyerEdgePanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class BuyerAffordabilityPlanner extends StatefulWidget {
+  const BuyerAffordabilityPlanner({super.key, required this.onApplyBudget});
+
+  final ValueChanged<int> onApplyBudget;
+
+  @override
+  State<BuyerAffordabilityPlanner> createState() =>
+      _BuyerAffordabilityPlannerState();
+}
+
+class _BuyerAffordabilityPlannerState extends State<BuyerAffordabilityPlanner> {
+  double monthlyIncome = 65000;
+  double deposit = 300000;
+
+  int get monthlyRepaymentGuide => (monthlyIncome * 0.3).round();
+
+  int get estimatedBudget => ((monthlyRepaymentGuide / 0.01) + deposit)
+      .round()
+      .clamp(500000, 50000000);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CircleAvatar(
+                backgroundColor: Color(0xFF12F58A),
+                child: Icon(Icons.savings_outlined, color: Colors.black),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Buyer budget check',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Estimated buying power ${compactCurrency(estimatedBudget)}',
+                      style: const TextStyle(color: appTextMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          BudgetSlider(
+            label: 'Monthly household income',
+            value: monthlyIncome,
+            min: 25000,
+            max: 250000,
+            divisions: 45,
+            onChanged: (value) => setState(() => monthlyIncome = value),
+          ),
+          const SizedBox(height: 10),
+          BudgetSlider(
+            label: 'Available deposit',
+            value: deposit,
+            min: 0,
+            max: 5000000,
+            divisions: 50,
+            onChanged: (value) => setState(() => deposit = value),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              MiniMetric(
+                label: 'Repayment guide',
+                value: currency(monthlyRepaymentGuide),
+              ),
+              MiniMetric(label: 'Deposit', value: currency(deposit.round())),
+              MiniMetric(
+                label: 'Search ceiling',
+                value: compactCurrency(estimatedBudget),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => widget.onApplyBudget(estimatedBudget),
+              icon: const Icon(Icons.manage_search_outlined),
+              label: const Text('Show homes I can buy'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BudgetSlider extends StatelessWidget {
+  const BudgetSlider({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            Text(
+              currency(value.round()),
+              style: const TextStyle(color: appTextSecondary),
+            ),
+          ],
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          label: currency(value.round()),
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class BuyerJourneyPanel extends StatelessWidget {
+  const BuyerJourneyPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const steps = [
+      BuyerStepData(
+        icon: Icons.account_balance_outlined,
+        title: 'Pre-qualify',
+        detail: 'Know your ceiling before falling in love with a home.',
+      ),
+      BuyerStepData(
+        icon: Icons.fact_check_outlined,
+        title: 'Inspect properly',
+        detail: 'Check levy, rates, defects, security and transfer costs.',
+      ),
+      BuyerStepData(
+        icon: Icons.edit_document,
+        title: 'Offer smart',
+        detail: 'Use demand, days live and agent speed to time the offer.',
+      ),
+      BuyerStepData(
+        icon: Icons.key_outlined,
+        title: 'Transfer',
+        detail: 'Track bond approval, attorneys, guarantees and occupation.',
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Buyer roadmap',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'A simple path from browsing to keys, built for first-time and repeat buyers.',
+            style: TextStyle(color: appTextMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          ...steps.map((step) => BuyerStep(step: step)),
+        ],
+      ),
+    );
+  }
+}
+
+class BuyerStep extends StatelessWidget {
+  const BuyerStep({super.key, required this.step});
+
+  final BuyerStepData step;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(step.icon, color: const Color(0xFF12F58A), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  step.title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  step.detail,
+                  style: const TextStyle(color: appTextMuted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BuyerStepData {
+  const BuyerStepData({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
 }
 
 class SellerValuationPanel extends StatelessWidget {
