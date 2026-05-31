@@ -42,3 +42,47 @@ jobs:
         with:
           name: more-properties-web
           path: build/web
+
+  build-android:
+    name: Build Android APK and App Bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --release --dart-define-from-file=supabase/dart_defines.json
+
+      - name: Build Android app bundle
+        run: flutter build appbundle --release --dart-define-from-file=supabase/dart_defines.json
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: more-properties-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload Android app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: more-properties-android-aab
+          path: build/app/outputs/bundle/release/app-release.aab

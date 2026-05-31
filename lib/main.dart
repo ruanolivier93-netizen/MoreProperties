@@ -1349,6 +1349,10 @@ class ListingDetailSheet extends StatelessWidget {
                     const SizedBox(height: 22),
                     ListingSignalGrid(listing: listing),
                     const SizedBox(height: 22),
+                    BuyerPlanPanel(listing: listing),
+                    const SizedBox(height: 22),
+                    AreaIntelligencePanel(listing: listing),
+                    const SizedBox(height: 22),
                     const Text(
                       'Overview',
                       style: TextStyle(
@@ -1463,116 +1467,118 @@ class _LeadFormState extends State<LeadForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        18,
-        18,
-        18,
-        18 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Send enquiry',
-            style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.listing.title,
-            style: const TextStyle(color: appTextMuted),
-          ),
-          const SizedBox(height: 16),
-          AppField(
-            controller: name,
-            label: 'Full name',
-            icon: Icons.person_outline,
-          ),
-          const SizedBox(height: 10),
-          AppField(
-            controller: email,
-            label: 'Email address',
-            icon: Icons.alternate_email,
-          ),
-          const SizedBox(height: 10),
-          AppField(
-            controller: phone,
-            label: 'Mobile number',
-            icon: Icons.phone_iphone,
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'Buyer intent',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: ['Viewing soon', 'Need finance', 'Cash buyer'].map((
-              item,
-            ) {
-              return ChoiceChip(
-                selected: readiness == item,
-                label: Text(item),
-                onSelected: (_) => setState(() => readiness = item),
-                selectedColor: const Color(0xFF12F58A),
-                backgroundColor: const Color(0xFF0A110D),
-                labelStyle: TextStyle(
-                  color: readiness == item ? Colors.black : Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
-                side: const BorderSide(color: Color(0x3312F58A)),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Preferred time',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: ['This week', 'Weekend', 'After hours'].map((item) {
-              return ChoiceChip(
-                selected: viewingWindow == item,
-                label: Text(item),
-                onSelected: (_) => setState(() => viewingWindow = item),
-                selectedColor: const Color(0xFF12F58A),
-                backgroundColor: const Color(0xFF0A110D),
-                labelStyle: TextStyle(
-                  color: viewingWindow == item ? Colors.black : Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
-                side: const BorderSide(color: Color(0x3312F58A)),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 10),
-          AppField(
-            controller: message,
-            label: 'Message to agent',
-            icon: Icons.chat_bubble_outline,
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: busy ? null : submitLead,
-              icon: busy
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              label: const Text('Request viewing'),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          18,
+          18,
+          18,
+          18 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Send enquiry',
+              style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              widget.listing.title,
+              style: const TextStyle(color: appTextMuted),
+            ),
+            const SizedBox(height: 16),
+            AppField(
+              controller: name,
+              label: 'Full name',
+              icon: Icons.person_outline,
+            ),
+            const SizedBox(height: 10),
+            AppField(
+              controller: email,
+              label: 'Email address',
+              icon: Icons.alternate_email,
+            ),
+            const SizedBox(height: 10),
+            AppField(
+              controller: phone,
+              label: 'Mobile number',
+              icon: Icons.phone_iphone,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Buyer intent',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['Viewing soon', 'Need finance', 'Cash buyer'].map((
+                item,
+              ) {
+                return ChoiceChip(
+                  selected: readiness == item,
+                  label: Text(item),
+                  onSelected: (_) => setState(() => readiness = item),
+                  selectedColor: const Color(0xFF12F58A),
+                  backgroundColor: const Color(0xFF0A110D),
+                  labelStyle: TextStyle(
+                    color: readiness == item ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  side: const BorderSide(color: Color(0x3312F58A)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Preferred time',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['This week', 'Weekend', 'After hours'].map((item) {
+                return ChoiceChip(
+                  selected: viewingWindow == item,
+                  label: Text(item),
+                  onSelected: (_) => setState(() => viewingWindow = item),
+                  selectedColor: const Color(0xFF12F58A),
+                  backgroundColor: const Color(0xFF0A110D),
+                  labelStyle: TextStyle(
+                    color: viewingWindow == item ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  side: const BorderSide(color: Color(0x3312F58A)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            AppField(
+              controller: message,
+              label: 'Message to agent',
+              icon: Icons.chat_bubble_outline,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: busy ? null : submitLead,
+                icon: busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                label: const Text('Request viewing'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1698,7 +1704,9 @@ class SavedPage extends StatelessWidget {
             icon: Icons.favorite_border,
             title: 'No saved properties yet',
           )
-        else
+        else ...[
+          ShortlistComparisonPanel(listings: listings),
+          const SizedBox(height: 16),
           ...listings.map(
             (listing) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -1710,13 +1718,170 @@ class SavedPage extends StatelessWidget {
               ),
             ),
           ),
+        ],
       ],
     );
   }
 }
 
-class AlertsPage extends StatelessWidget {
+class ShortlistComparisonPanel extends StatelessWidget {
+  const ShortlistComparisonPanel({super.key, required this.listings});
+
+  final List<PropertyListing> listings;
+
+  @override
+  Widget build(BuildContext context) {
+    final bestMatch = listings.reduce(
+      (left, right) => left.matchScore >= right.matchScore ? left : right,
+    );
+    final lowestMonthly = listings.reduce(
+      (left, right) => left.monthlyBond <= right.monthlyBond ? left : right,
+    );
+    final averagePrice =
+        listings.map((listing) => listing.price).reduce((a, b) => a + b) ~/
+        listings.length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Color(0xFF12F58A),
+                child: Icon(Icons.compare_arrows, color: Colors.black),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Shortlist intelligence',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${listings.length} saved · avg ${currency(averagePrice)}',
+                      style: const TextStyle(color: appTextMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: () => SharePlus.instance.share(
+                  ShareParams(text: _shortlistShareText(listings)),
+                ),
+                icon: const Icon(Icons.ios_share),
+                tooltip: 'Share shortlist',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ComparisonRow(
+            icon: Icons.workspace_premium_outlined,
+            label: 'Best match',
+            value: '${bestMatch.title} · ${bestMatch.matchScore}%',
+          ),
+          ComparisonRow(
+            icon: Icons.payments_outlined,
+            label: 'Lowest monthly',
+            value:
+                '${lowestMonthly.title} · ${currency(lowestMonthly.monthlyBond)}',
+          ),
+          ComparisonRow(
+            icon: Icons.speed_outlined,
+            label: 'Fastest agent',
+            value: _fastestAgent(listings),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _shortlistShareText(List<PropertyListing> listings) {
+    final lines = listings
+        .map((listing) {
+          return '${listing.title} - ${currency(listing.price)} in ${listing.suburb}';
+        })
+        .join('\n');
+    return 'My More Properties shortlist:\n$lines';
+  }
+
+  String _fastestAgent(List<PropertyListing> listings) {
+    final fastest = listings.reduce(
+      (left, right) => left.agent.responseMinutes <= right.agent.responseMinutes
+          ? left
+          : right,
+    );
+    return '${fastest.agent.name} · ${fastest.agent.responseTime}';
+  }
+}
+
+class ComparisonRow extends StatelessWidget {
+  const ComparisonRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF12F58A), size: 19),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(color: appTextMuted, fontSize: 12),
+                ),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AlertsPage extends StatefulWidget {
   const AlertsPage({super.key});
+
+  @override
+  State<AlertsPage> createState() => _AlertsPageState();
+}
+
+class _AlertsPageState extends State<AlertsPage> {
+  late final alerts = savedSearches.toList();
+  ListingMode mode = ListingMode.buy;
+  String city = 'Cape Town';
+  String cadence = 'Instant';
+  bool pushEnabled = true;
+  bool emailEnabled = true;
 
   @override
   Widget build(BuildContext context) {
@@ -1735,62 +1900,260 @@ class AlertsPage extends StatelessWidget {
           style: TextStyle(color: appTextMuted),
         ),
         const SizedBox(height: 18),
-        ...savedSearches.map(
-          (search) => Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0A110D),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0x2212F58A)),
-            ),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFF12F58A),
-                  child: Icon(Icons.radar, color: Colors.black),
+        AlertBuilderPanel(
+          mode: mode,
+          city: city,
+          cadence: cadence,
+          pushEnabled: pushEnabled,
+          emailEnabled: emailEnabled,
+          onModeChanged: (value) => setState(() => mode = value),
+          onCityChanged: (value) => setState(() => city = value),
+          onCadenceChanged: (value) => setState(() => cadence = value),
+          onPushChanged: (value) => setState(() => pushEnabled = value),
+          onEmailChanged: (value) => setState(() => emailEnabled = value),
+          onCreate: createAlert,
+        ),
+        const SizedBox(height: 18),
+        ...alerts.map((search) => AlertSearchCard(search: search)),
+      ],
+    );
+  }
+
+  void createAlert() {
+    final name = '$city ${mode.label.toLowerCase()} watchlist';
+    final channels = [
+      if (pushEnabled) 'push',
+      if (emailEnabled) 'email',
+    ].join(' + ');
+    setState(() {
+      alerts.insert(
+        0,
+        SavedSearchData(
+          name: name,
+          criteria:
+              '${mode.label} · ${compactCurrency(50000000)} max · $channels',
+          matches: 18 + alerts.length,
+          cadence: cadence,
+        ),
+      );
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Alert created: $name')));
+  }
+}
+
+class AlertBuilderPanel extends StatelessWidget {
+  const AlertBuilderPanel({
+    super.key,
+    required this.mode,
+    required this.city,
+    required this.cadence,
+    required this.pushEnabled,
+    required this.emailEnabled,
+    required this.onModeChanged,
+    required this.onCityChanged,
+    required this.onCadenceChanged,
+    required this.onPushChanged,
+    required this.onEmailChanged,
+    required this.onCreate,
+  });
+
+  final ListingMode mode;
+  final String city;
+  final String cadence;
+  final bool pushEnabled;
+  final bool emailEnabled;
+  final ValueChanged<ListingMode> onModeChanged;
+  final ValueChanged<String> onCityChanged;
+  final ValueChanged<String> onCadenceChanged;
+  final ValueChanged<bool> onPushChanged;
+  final ValueChanged<bool> onEmailChanged;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Color(0xFF12F58A),
+                child: Icon(
+                  Icons.notification_add_outlined,
+                  color: Colors.black,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        search.name,
-                        style: const TextStyle(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        search.criteria,
-                        style: const TextStyle(
-                          color: appTextMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${search.matches}',
-                      style: const TextStyle(fontWeight: FontWeight.w900),
+                      'Create a live alert',
+                      style: TextStyle(fontWeight: FontWeight.w900),
                     ),
+                    SizedBox(height: 3),
                     Text(
-                      search.cadence,
-                      style: const TextStyle(
-                        color: Color(0xFF12F58A),
-                        fontSize: 12,
-                      ),
+                      'Catch price drops, new mandates and fast-moving suburbs.',
+                      style: TextStyle(color: appTextMuted, fontSize: 12),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ListingMode.values.map((item) {
+              final selected = item == mode;
+              return ChoiceChip(
+                selected: selected,
+                label: Text(item.label),
+                onSelected: (_) => onModeChanged(item),
+                selectedColor: const Color(0xFF12F58A),
+                backgroundColor: const Color(0xFF111B15),
+                labelStyle: TextStyle(
+                  color: selected ? Colors.black : Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+                side: const BorderSide(color: Color(0x3312F58A)),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['Cape Town', 'Johannesburg', 'Durban', 'Stellenbosch']
+                .map(
+                  (item) => ChoiceChip(
+                    selected: item == city,
+                    label: Text(item),
+                    onSelected: (_) => onCityChanged(item),
+                    selectedColor: const Color(0xFF12F58A),
+                    backgroundColor: const Color(0xFF111B15),
+                    labelStyle: TextStyle(
+                      color: item == city ? Colors.black : Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    side: const BorderSide(color: Color(0x3312F58A)),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['Instant', 'Daily', 'Weekly']
+                .map(
+                  (item) => ChoiceChip(
+                    selected: item == cadence,
+                    label: Text(item),
+                    onSelected: (_) => onCadenceChanged(item),
+                    selectedColor: const Color(0xFF12F58A),
+                    backgroundColor: const Color(0xFF111B15),
+                    labelStyle: TextStyle(
+                      color: item == cadence ? Colors.black : Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    side: const BorderSide(color: Color(0x3312F58A)),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Push notifications'),
+            value: pushEnabled,
+            onChanged: onPushChanged,
+          ),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Email digest'),
+            value: emailEnabled,
+            onChanged: onEmailChanged,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onCreate,
+              icon: const Icon(Icons.radar),
+              label: const Text('Create alert'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AlertSearchCard extends StatelessWidget {
+  const AlertSearchCard({super.key, required this.search});
+
+  final SavedSearchData search;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x2212F58A)),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            backgroundColor: Color(0xFF12F58A),
+            child: Icon(Icons.radar, color: Colors.black),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  search.name,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  search.criteria,
+                  style: const TextStyle(color: appTextMuted, fontSize: 12),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${search.matches}',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+              Text(
+                search.cadence,
+                style: const TextStyle(color: Color(0xFF12F58A), fontSize: 12),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1870,7 +2233,177 @@ class StudioPage extends StatelessWidget {
           delta: '9 confirmed, 8 pending',
           icon: Icons.calendar_month_outlined,
         ),
+        SizedBox(height: 6),
+        LeadPipelineBoard(),
+        SizedBox(height: 18),
+        StudioActionList(),
       ],
+    );
+  }
+}
+
+class LeadPipelineBoard extends StatelessWidget {
+  const LeadPipelineBoard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Text(
+            'Lead pipeline',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          SizedBox(height: 12),
+          PipelineStage(label: 'New', value: 38, color: Color(0xFF12F58A)),
+          PipelineStage(
+            label: 'Contacted',
+            value: 24,
+            color: Color(0xFF7DFFC3),
+          ),
+          PipelineStage(
+            label: 'Viewing booked',
+            value: 17,
+            color: Color(0xFFFFD166),
+          ),
+          PipelineStage(label: 'Qualified', value: 9, color: Color(0xFFFF7A7A)),
+        ],
+      ),
+    );
+  }
+}
+
+class PipelineStage extends StatelessWidget {
+  const PipelineStage({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 104,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: appTextMuted, fontSize: 12),
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                minHeight: 9,
+                value: value / 40,
+                backgroundColor: const Color(0xFF111B15),
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text('$value', style: const TextStyle(fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+}
+
+class StudioActionList extends StatelessWidget {
+  const StudioActionList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Text(
+          'Today\'s action list',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+        ),
+        SizedBox(height: 10),
+        StudioActionTile(
+          icon: Icons.phone_in_talk_outlined,
+          title: 'Call 6 hot leads',
+          detail: 'Prioritise buyers who viewed twice today.',
+        ),
+        StudioActionTile(
+          icon: Icons.camera_alt_outlined,
+          title: 'Improve 2 listing galleries',
+          detail: 'Add exterior dusk shots and floor-plan images.',
+        ),
+        StudioActionTile(
+          icon: Icons.fact_check_outlined,
+          title: 'Verify mandate documents',
+          detail: '3 listings need FICA and signed authority checks.',
+        ),
+      ],
+    );
+  }
+}
+
+class StudioActionTile extends StatelessWidget {
+  const StudioActionTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x2212F58A)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF12F58A)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  detail,
+                  style: const TextStyle(color: appTextMuted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1984,6 +2517,219 @@ class ListingSignalGrid extends StatelessWidget {
           itemBuilder: (context, index) => SignalTile(signal: signals[index]),
         );
       },
+    );
+  }
+}
+
+class BuyerPlanPanel extends StatelessWidget {
+  const BuyerPlanPanel({super.key, required this.listing});
+
+  final PropertyListing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final deposit = listing.mode == ListingMode.rent
+        ? listing.price * 2
+        : (listing.price * 0.1).round();
+    final transferBuffer = listing.mode == ListingMode.buy
+        ? (listing.price * 0.035).round()
+        : 0;
+    final incomeNeeded = (listing.monthlyBond / 0.3).round();
+    final actionLabel = listing.mode == ListingMode.rent
+        ? 'Rental readiness'
+        : 'Buyer readiness';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Color(0xFF12F58A),
+                child: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      actionLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'Fast estimate before you speak to the agent.',
+                      style: TextStyle(color: appTextMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              MiniMetric(
+                label: listing.mode == ListingMode.rent
+                    ? 'Deposit'
+                    : '10% deposit',
+                value: currency(deposit),
+              ),
+              MiniMetric(
+                label: listing.mode == ListingMode.rent
+                    ? 'Monthly rent'
+                    : 'Est. bond',
+                value: currency(listing.monthlyBond),
+              ),
+              MiniMetric(label: 'Income guide', value: currency(incomeNeeded)),
+              if (transferBuffer > 0)
+                MiniMetric(
+                  label: 'Transfer buffer',
+                  value: currency(transferBuffer),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AreaIntelligencePanel extends StatelessWidget {
+  const AreaIntelligencePanel({super.key, required this.listing});
+
+  final PropertyListing listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final insights = _areaInsights(listing);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Color(0xFF12F58A),
+                child: Icon(Icons.insights_outlined, color: Colors.black),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Area intelligence',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Local signals to check before booking a viewing.',
+                      style: TextStyle(color: appTextMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...insights.map(
+            (insight) => ComparisonRow(
+              icon: insight.icon,
+              label: insight.label,
+              value: insight.value,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<SignalData> _areaInsights(PropertyListing listing) {
+    final growth = switch (listing.city) {
+      'Cape Town' => 'Low stock and high semigration pressure',
+      'Johannesburg' => 'Strong node demand near work hubs',
+      'Durban' => 'Coastal lifestyle and corporate rental depth',
+      'Stellenbosch' => 'Education, wine estate and security-led demand',
+      _ => 'Demand depends on suburb quality and pricing',
+    };
+    return [
+      SignalData(
+        icon: Icons.trending_up,
+        label: 'Demand driver',
+        value: growth,
+      ),
+      SignalData(
+        icon: Icons.shield_outlined,
+        label: 'Risk check',
+        value: listing.verifiedDocs
+            ? 'Mandate, agent and listing details verified'
+            : 'Confirm mandate and documents with the agent',
+      ),
+      SignalData(
+        icon: Icons.schedule_outlined,
+        label: 'Viewing urgency',
+        value: listing.demandScore > 85
+            ? 'Book within 24 hours'
+            : 'Compare with similar stock this week',
+      ),
+    ];
+  }
+}
+
+class MiniMetric extends StatelessWidget {
+  const MiniMetric({super.key, required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 138,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111B15),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: appTextMuted, fontSize: 11),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2216,6 +2962,7 @@ class Agent {
     required this.avatarUrl,
     required this.rating,
     required this.responseTime,
+    required this.responseMinutes,
   });
 
   final String id;
@@ -2226,6 +2973,7 @@ class Agent {
   final String avatarUrl;
   final double rating;
   final String responseTime;
+  final int responseMinutes;
 }
 
 class PropertyListing {
@@ -2316,6 +3064,7 @@ class PropertyListing {
             agentRow['avatar_url']?.toString() ?? demoAgents.first.avatarUrl,
         rating: _readDouble(agentRow['rating'], fallback: 4.8),
         responseTime: '$responseMinutes min response',
+        responseMinutes: responseMinutes,
       ),
       matchScore: matchScore,
       demandScore: demandScore,
@@ -2451,6 +3200,7 @@ const demoAgents = [
         'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
     rating: 4.9,
     responseTime: '9 min response',
+    responseMinutes: 9,
   ),
   Agent(
     id: '22222222-2222-4222-8222-222222222222',
@@ -2462,6 +3212,7 @@ const demoAgents = [
         'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
     rating: 4.8,
     responseTime: '14 min response',
+    responseMinutes: 14,
   ),
   Agent(
     id: '33333333-3333-4333-8333-333333333333',
@@ -2473,6 +3224,7 @@ const demoAgents = [
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
     rating: 4.9,
     responseTime: '7 min response',
+    responseMinutes: 7,
   ),
 ];
 

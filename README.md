@@ -31,17 +31,24 @@ Run connected to Supabase:
 flutter run --dart-define-from-file=supabase/dart_defines.json
 ```
 
-## GitHub Build
+## GitHub Builds
 
-GitHub Actions builds the Flutter web app on every push or pull request to `main` or `master`. You can also run it manually from the repository's `Actions` tab by selecting `Flutter CI` and choosing `Run workflow`.
+GitHub Actions builds the Flutter web and Android apps on every push or pull request to `main` or `master`. You can also run it manually from the repository's `Actions` tab by selecting `Flutter CI` and choosing `Run workflow`.
 
-The workflow runs `flutter pub get`, `flutter analyze`, `flutter test`, and:
+The web job runs `flutter pub get`, `flutter analyze`, `flutter test`, and:
 
 ```powershell
 flutter build web --release --dart-define-from-file=supabase/dart_defines.json
 ```
 
-When the workflow finishes, download the `more-properties-web` artifact from the run summary.
+The Android job runs:
+
+```powershell
+flutter build apk --release --dart-define-from-file=supabase/dart_defines.json
+flutter build appbundle --release --dart-define-from-file=supabase/dart_defines.json
+```
+
+When the workflow finishes, download `more-properties-web`, `more-properties-android-apk`, or `more-properties-android-aab` from the run summary. The current Android release uses the default debug signing config; add Play Store signing before publishing publicly.
 
 ## Supabase Setup
 
