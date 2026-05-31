@@ -149,6 +149,7 @@ class _MainShellState extends State<MainShell> {
         }),
         onSearchChanged: (_) => setState(() {}),
         onOpenFilters: openFilters,
+        onOpenValuation: openValuation,
         onToggleFavourite: toggleFavourite,
         onOpenListing: openListing,
       ),
@@ -262,6 +263,18 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
+  void openValuation() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF08100B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => const ValuationLeadForm(),
+    );
+  }
+
   void openFilters() {
     showModalBottomSheet<void>(
       context: context,
@@ -311,6 +324,7 @@ class DiscoverPage extends StatelessWidget {
     required this.onModeChanged,
     required this.onSearchChanged,
     required this.onOpenFilters,
+    required this.onOpenValuation,
     required this.onToggleFavourite,
     required this.onOpenListing,
   });
@@ -329,6 +343,7 @@ class DiscoverPage extends StatelessWidget {
   final ValueChanged<ListingMode> onModeChanged;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onOpenFilters;
+  final VoidCallback onOpenValuation;
   final ValueChanged<String> onToggleFavourite;
   final ValueChanged<PropertyListing> onOpenListing;
 
@@ -368,6 +383,8 @@ class DiscoverPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 const BuyerEdgePanel(),
+                const SizedBox(height: 18),
+                SellerValuationPanel(onStart: onOpenValuation),
                 const SizedBox(height: 18),
                 const MarketPulse(),
                 const SizedBox(height: 18),
@@ -772,6 +789,260 @@ class BuyerEdgePanel extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class SellerValuationPanel extends StatelessWidget {
+  const SellerValuationPanel({super.key, required this.onStart});
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A110D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0x3312F58A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                backgroundColor: Color(0xFF12F58A),
+                child: Icon(Icons.home_work_outlined, color: Colors.black),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Own a property?',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Get a pricing opinion, demand snapshot and agent plan before you list.',
+                      style: TextStyle(color: appTextMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: const [
+              FactChip(icon: Icons.trending_up, label: 'Price pulse'),
+              FactChip(icon: Icons.groups_outlined, label: 'Buyer demand'),
+              FactChip(icon: Icons.verified_outlined, label: 'Agent plan'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onStart,
+              icon: const Icon(Icons.calculate_outlined),
+              label: const Text('Request valuation'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ValuationLeadForm extends StatefulWidget {
+  const ValuationLeadForm({super.key});
+
+  @override
+  State<ValuationLeadForm> createState() => _ValuationLeadFormState();
+}
+
+class _ValuationLeadFormState extends State<ValuationLeadForm> {
+  final name = TextEditingController();
+  final phone = TextEditingController();
+  final address = TextEditingController();
+  String city = 'Cape Town';
+  String timeline = 'Just exploring';
+  bool busy = false;
+
+  @override
+  void dispose() {
+    name.dispose();
+    phone.dispose();
+    address.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          18,
+          18,
+          18,
+          18 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Request valuation',
+              style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'A verified agent can turn this into a listing plan, pricing range and buyer demand report.',
+              style: TextStyle(color: appTextMuted),
+            ),
+            const SizedBox(height: 16),
+            AppField(
+              controller: name,
+              label: 'Full name',
+              icon: Icons.person_outline,
+            ),
+            const SizedBox(height: 10),
+            AppField(
+              controller: phone,
+              label: 'Mobile number',
+              icon: Icons.phone_iphone,
+            ),
+            const SizedBox(height: 10),
+            AppField(
+              controller: address,
+              label: 'Property address',
+              icon: Icons.location_on_outlined,
+            ),
+            const SizedBox(height: 14),
+            const Text('City', style: TextStyle(fontWeight: FontWeight.w900)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['Cape Town', 'Johannesburg', 'Durban', 'Stellenbosch']
+                  .map(
+                    (item) => ChoiceChip(
+                      selected: city == item,
+                      label: Text(item),
+                      onSelected: (_) => setState(() => city = item),
+                      selectedColor: const Color(0xFF12F58A),
+                      backgroundColor: const Color(0xFF0A110D),
+                      labelStyle: TextStyle(
+                        color: city == item ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      side: const BorderSide(color: Color(0x3312F58A)),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Timeline',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['Just exploring', '0-3 months', '3-6 months']
+                  .map(
+                    (item) => ChoiceChip(
+                      selected: timeline == item,
+                      label: Text(item),
+                      onSelected: (_) => setState(() => timeline = item),
+                      selectedColor: const Color(0xFF12F58A),
+                      backgroundColor: const Color(0xFF0A110D),
+                      labelStyle: TextStyle(
+                        color: timeline == item ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      side: const BorderSide(color: Color(0x3312F58A)),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: busy ? null : submitValuationLead,
+                icon: busy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                label: const Text('Send valuation request'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> submitValuationLead() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    if (name.text.trim().isEmpty ||
+        phone.text.trim().isEmpty ||
+        address.text.trim().isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Add your name, phone and property address.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => busy = true);
+    final leadMessage = [
+      'Owner valuation request.',
+      'Address: ${address.text.trim()}, $city.',
+      'Timeline: $timeline.',
+      'Suggested next step: send CMA and seller plan.',
+    ].join(' ');
+    try {
+      if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
+        await Supabase.instance.client.from('leads').insert({
+          'name': name.text.trim(),
+          'phone': phone.text.trim(),
+          'message': leadMessage,
+          'source': 'seller_valuation',
+          'status': 'new',
+        });
+      }
+      if (!mounted) return;
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            supabaseUrl.isEmpty
+                ? 'Demo valuation request captured locally.'
+                : 'Valuation request sent. An agent can follow up from Supabase.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not send valuation request: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 }
 
