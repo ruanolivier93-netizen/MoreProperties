@@ -665,13 +665,13 @@ packages:
     source: hosted
     version: "2.3.1"
   path_provider_foundation:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: path_provider_foundation
-      sha256: "2a376b7d6392d80cd3705782d2caa734ca4727776db0b6ec36ef3f1855197699"
+      sha256: f234384a3fdd67f989b4d54a5d73ca2a6c422fa55ae694381ae0f4375cd1ea16
       url: "https://pub.dev"
     source: hosted
-    version: "2.6.0"
+    version: "2.4.0"
   path_provider_linux:
     dependency: transitive
     description:
@@ -1183,4 +1183,4 @@ packages:
     version: "2.1.0"
 sdks:
   dart: ">=3.10.7 <4.0.0"
-  flutter: ">=3.38.4"
+  flutter: ">=3.38.1"

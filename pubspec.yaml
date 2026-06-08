@@ -36,6 +36,9 @@ dev_dependencies:
 # spaces (known Flutter SDK quoting bug).
 dependency_overrides:
   objective_c: 4.1.0
+  # path_provider_foundation 2.6.0 requires objective_c ^5.0.0 which conflicts
+  # with the 4.1.0 pin above. 2.4.0 is the last version that targets ^4.0.0.
+  path_provider_foundation: 2.4.0
 
 flutter:
   uses-material-design: true
