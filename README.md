@@ -1,17 +1,31 @@
-# More Properties
+# More Properties — South Africa
 
-More Properties is a mobile-first Flutter and Supabase real estate marketplace for South Africa. It is designed around the major workflows users expect from a premium property platform: discovery, search, buy/rent/development/commercial categories, listing detail sheets, favourites, saved alerts, verified agents, enquiry capture and an agent performance studio.
+**More Properties** is a premium South African real-estate marketplace built with Flutter and Supabase, in a black-and-electric-green design language. It is fully usable out of the box in demo mode (no backend) and seamlessly upgrades to live Supabase data when keys are provided.
 
-The visual direction is black and electric green with a sleek, modern app feel.
+## What's inside
 
-## Tech Stack
+- **Discover** — featured hero carousel, province quick-browse, rentals with backup power, new developments, trending lifestyle homes.
+- **Search** — Mode switcher (Buy / Rent / Developments / Commercial), full-text search, sort, infinite-scrollable results, compare list.
+- **Filters** — Province → city drill-down, ZAR budget range, beds/baths/parking, property types, **resilience** (solar, inverter, generator, borehole…), **security** (24h, armed response, biometric…), **lifestyle** (pool, sea view, wine cellar…), verified-only & featured-only.
+- **Listing detail** — Gallery, trust badges (PPRA, POPIA, FICA), key stats grid, suburb intelligence scores (load shedding, safety, schools, lifestyle), feature groups, indicative bond from the SARB prime rate, full SARS-based acquisition cost breakdown, agent card, WhatsApp / call / email enquiry.
+- **Tools** — Three SA-specific calculators:
+  - **Bond calculator** — Monthly instalment, capital vs interest pie chart, term & rate sliders.
+  - **Transfer duty & costs** — SARS 2025/26 bracket-by-bracket plus transfer attorney, bond registration and deeds office fees.
+  - **Affordability** — Bank-style 30% qualifying ratio, cashflow buffer, term & rate inputs.
+- **Saved searches & alerts** — Push & email toggles, instant / daily / weekly cadences.
+- **Favourites & Compare** — Side-by-side spec table for up to 3 properties.
+- **Agent profile** — PPRA number, rating, average response time, live listings.
+- **Account** — Profile, agent directory, POPIA & FICA badges, connection-status indicator.
+- **Onboarding** — Four-slide intro explaining discovery, load-shedding readiness, calculators, and verified agents.
 
-- Flutter for Android, iOS and web
-- Supabase Auth, Postgres, Row Level Security and Storage
-- `supabase_flutter` for live data writes
-- `cached_network_image`, `google_fonts`, `intl`, `url_launcher` and `share_plus`
+## Tech
 
-## Run Locally
+- Flutter 3.38+
+- Riverpod 2.6 for state management
+- Supabase Flutter 2.12 (auth, Postgres, RLS, storage)
+- `cached_network_image`, `google_fonts`, `intl`, `url_launcher`, `share_plus`, `fl_chart`
+
+## Run locally
 
 Install dependencies:
 
@@ -19,57 +33,42 @@ Install dependencies:
 flutter pub get
 ```
 
-Run in demo mode without Supabase keys:
+Demo mode (no Supabase):
 
 ```powershell
 flutter run
 ```
 
-Run connected to Supabase:
+Live mode (Supabase keys provided):
 
 ```powershell
 flutter run --dart-define-from-file=supabase/dart_defines.json
 ```
 
-## GitHub Builds
+The app silently hydrates `listings` from Supabase on launch when keys are configured, falling back to the curated demo dataset on any failure so the UX always works.
 
-GitHub Actions builds the Flutter web and Android apps on every push or pull request to `main` or `master`. You can also run it manually from the repository's `Actions` tab by selecting `Flutter CI` and choosing `Run workflow`.
-
-The web job runs `flutter pub get`, `flutter analyze`, `flutter test`, and:
+## Build
 
 ```powershell
-flutter build web --release --dart-define-from-file=supabase/dart_defines.json
-```
-
-The Android job runs:
-
-```powershell
+flutter analyze
+flutter test
+flutter build web --release
 flutter build apk --release --dart-define-from-file=supabase/dart_defines.json
 flutter build appbundle --release --dart-define-from-file=supabase/dart_defines.json
 ```
 
-When the workflow finishes, download `more-properties-web`, `more-properties-android-apk`, or `more-properties-android-aab` from the run summary. The current Android release uses the default debug signing config; add Play Store signing before publishing publicly.
+## Supabase schema
 
-## Supabase Setup
+`supabase/schema.sql` defines the production-grade schema: profiles, agencies, agents, listings (with `tsvector` full-text search), listing images, favourites, saved searches, leads, viewing appointments and listing views — all behind row-level security policies. Run it once in the Supabase SQL editor and seed with `supabase/seed.sql` if you'd like sample data.
 
-Open the Supabase SQL editor and run:
+## Notes on South African context
 
-1. [supabase/schema.sql](supabase/schema.sql)
-2. [supabase/seed.sql](supabase/seed.sql)
+- All pricing displayed in **ZAR** with locale-correct grouping (`R 1 250 000`).
+- Bond maths use the published **SARB prime rate** (currently 10.75%).
+- Transfer duty uses the **SARS 2025/26 brackets** — six tiers from R0 up to R13.31m and beyond.
+- Trust badges call out **PPRA** (Property Practitioners Regulatory Authority) registration, **POPIA** consent and **FICA** verification.
+- Listing filters include **load-shedding resilience** (solar, inverter, generator, borehole, JoJo tanks, EV charger), reflecting the realities of buying property in SA today.
 
-If the browser console shows a `404` for `/rest/v1/listings`, the app is connected to Supabase but the database tables have not been created in that project yet. Run the two SQL files above, refresh the app, and the live catalogue will replace the demo fallback.
+## Windows path workaround
 
-The schema includes profiles, agencies, agents, listings, listing images, favourites, saved searches, leads, appointments, listing views, storage policies and RLS.
-
-## Current App Screens
-
-- Discover: mobile search, listing category chips, market pulse and property cards
-- Listing detail: premium bottom sheet with facts, highlights, agent contact and enquiry form
-- Saved: favourite properties and comparison-ready shortlist flow
-- Alerts: saved-search concepts ready for push/email/WhatsApp automation
-- Agents: verified agent profiles with contact actions
-- Studio: agent dashboard metrics for leads, response time, listing health and viewings
-
-## Notes
-
-This project intentionally does not copy proprietary branding, assets or code from another site. It builds an original app with comparable real estate marketplace workflows, using the requested black and green design language.
+If your project path contains a space (e.g. `C:\Users\Marketing3 FinFix\Music\more properties`), `flutter test` may try to compile the `objective_c` package's `build.dart` hook and fail because the Flutter tool does not quote the path correctly. The pubspec pins `objective_c: 4.1.0` via `dependency_overrides` to a version that does not run the broken hook. Remove the override on platforms without spaces in their paths.

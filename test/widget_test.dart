@@ -1,18 +1,33 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:more_properties/main.dart';
+
+import 'package:more_properties/screens/shell.dart';
+import 'package:more_properties/theme.dart';
 
 void main() {
-  testWidgets('More Properties renders the mobile marketplace shell', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MorePropertiesApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'More Properties shell renders the bottom navigation labels',
+    (tester) async {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.reset);
 
-    expect(find.text('More Properties'), findsOneWidget);
-    expect(find.text('Discover'), findsOneWidget);
-    expect(find.text('Saved'), findsOneWidget);
-    expect(find.text('Alerts'), findsOneWidget);
-    expect(find.text('Agents'), findsOneWidget);
-    expect(find.text('Studio'), findsOneWidget);
-  });
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.build(),
+            home: const AppShell(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Discover'), findsWidgets);
+      expect(find.text('Search'), findsWidgets);
+      expect(find.text('Tools'), findsWidgets);
+      expect(find.text('Saved'), findsWidgets);
+      expect(find.text('Account'), findsWidgets);
+    },
+  );
 }

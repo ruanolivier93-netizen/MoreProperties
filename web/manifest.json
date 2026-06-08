@@ -1,11 +1,11 @@
 {
-    "name": "more_properties",
-    "short_name": "more_properties",
+    "name": "More Properties",
+    "short_name": "More Properties",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#050806",
+    "theme_color": "#12F58A",
+    "description": "South Africa's premium property marketplace — buy, rent, developments and commercial across SA.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

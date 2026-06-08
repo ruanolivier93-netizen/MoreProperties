@@ -1,0 +1,52 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flutter (Chrome, Live)",
+            "type": "dart",
+            "request": "launch",
+            "flutterMode": "debug",
+            "deviceId": "chrome",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define-from-file=supabase/dart_defines.json"
+            ]
+        },
+        {
+            "name": "Flutter (Chrome, Demo)",
+            "type": "dart",
+            "request": "launch",
+            "flutterMode": "debug",
+            "deviceId": "chrome",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "Flutter (Chrome, Live, Incognito)",
+            "type": "dart",
+            "request": "launch",
+            "flutterMode": "debug",
+            "deviceId": "chrome",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define-from-file=supabase/dart_defines.json",
+                "--web-browser-flag=--incognito"
+            ]
+        },
+        {
+            "name": "Flutter (Chrome, Live, Fresh Auth)",
+            "type": "dart",
+            "request": "launch",
+            "flutterMode": "debug",
+            "deviceId": "chrome",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define-from-file=supabase/dart_defines.json",
+                "--dart-define=FORCE_SIGN_OUT_ON_START=true",
+                "--web-browser-flag=--incognito"
+            ]
+        }
+    ]
+}
